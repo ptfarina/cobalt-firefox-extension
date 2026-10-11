@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Cobalt Downloader — Configurações</title>
+<style>
+body { font: 14px/1.5 system-ui, sans-serif; max-width: 620px; margin: 24px auto; padding: 0 16px; }
+label { display: block; margin: 12px 0; }
+input, select { width: 100%; padding: 8px; margin-top: 4px; }
+button { padding: 8px 14px; }
+.hint { font-size: 12px; opacity: .75; }
+.warn { background: #fff3cd; border: 1px solid #e0c36a; padding: 10px; border-radius: 4px; }
+code { background: #eee; padding: 1px 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>Configurações — Cobalt Downloader</h1>
+
+<div class="warn">
+  A instância pública <code>api.cobalt.tools</code> usa proteção anti-bot e <b>não</b> é liberada
+  para uso por terceiros (ver <a href="https://github.com/imputnet/cobalt/blob/main/docs/api.md">docs da API</a>).
+  Hospede sua própria instância (<a href="https://github.com/imputnet/cobalt/blob/main/docs/run-an-instance.md">guia</a>)
+  ou use uma instância comunitária de <a href="https://instances.cobalt.best">instances.cobalt.best</a>
+  (com permissão do dono) — cole abaixo a URL base, ex.: <code>https://cobalt.sua-instancia.exemplo</code>.
+  <br><b>Importante:</b> use a URL da <b>API</b>, não a do site/frontend web
+  (ex.: <code>cobalt.meowing.de</code> é só o site — ele retorna HTML e causa erro de JSON).
+  Use sempre <code>https://</code>; <code>http://</code> geralmente só retorna redirect em HTML.
+</div>
+
+<label>URL da instância (POST /)
+  <input id="instanceUrl" placeholder="https://sua-instancia.exemplo">
+</label>
+
+<label>Api-Key (opcional — exigido por algumas instâncias)
+  <input id="apiKey" type="password" placeholder="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee">
+  <span class="hint">Enviado como header <code>Authorization: Api-Key &lt;chave&gt;</code>. Deixe vazio se a instância for aberta.</span>
+</label>
+
+<label>Modo padrão
+  <select id="downloadMode">
+    <option value="auto">auto</option>
+    <option value="audio">audio</option>
+    <option value="mute">mute</option>
+  </select>
+</label>
+
+<label>Qualidade padrão
+  <select id="videoQuality">
+    <option>max</option><option>4320</option><option>2160</option><option>1440</option>
+    <option selected>1080</option><option>720</option><option>480</option><option>360</option>
+    <option>240</option><option>144</option>
+  </select>
+</label>
+
+<label>Formato de áudio
+  <select id="audioFormat">
+    <option>best</option><option selected>mp3</option><option>ogg</option><option>wav</option><option>opus</option>
+  </select>
+</label>
+
+<label>Estilo do nome do arquivo
+  <select id="filenameStyle">
+    <option selected>basic</option><option>pretty</option><option>classic</option><option>nerdy</option>
+  </select>
+</label>
+
+<p>
+  <button id="save">Salvar</button>
+  <button id="test">Testar (GET /)</button>
+  <span id="msg" class="hint"></span>
+</p>
+
+<h2>Instância local (Docker)</h2>
+<p class="hint">
+  Sobe sua própria API em <code>http://localhost:9000</code> quando o Firefox abre
+  e <b>para quando você fecha o Firefox</b> (stop imediato + supervisor que desliga
+  após ~6 min sem sinal — cobre também crash e suspensão). Sem custo quando fechado.
+  Requer: daemon docker rodando e <code>native-host/install-host.sh</code> executado uma vez.
+</p>
+<p>Status local: <b id="localStatus">—</b></p>
+<p>
+  <button id="localUse">Usar instância local</button>
+  <button id="localStart">Iniciar agora</button>
+  <button id="localStop">Parar agora</button>
+  <button id="localRefresh">Atualizar status</button>
+</p>
+<label><input id="localAuto" type="checkbox" style="width:auto"> Subir com o Firefox e parar ao fechar (recomendado)</label>
+
+<h2>Anti-bot e logins (instância local)</h2>
+<p class="hint">
+  Sua instância já roda com gerador de sessão do YouTube (poToken automático).
+  Para o resto, o mecanismo oficial são <b>cookies da sua própria sessão</b>
+  (o Cobalt só acessa o que você já acessa logado — nada é burlado):
+</p>
+<ul class="hint">
+  <li><b>YouTube</b>: poToken automático + cookies (se ainda falhar)</li>
+  <li><b>Instagram</b>: <code>sessionid</code> · <b>Reddit</b>: tripleta OAuth · <b>Twitter/X</b>: <code>auth_token</code>+<code>ct0</code> · <b>Vimeo</b>: <code>access_token</code></li>
+  <li><b>TikTok</b>: fora do escopo (botão direito no vídeo já resolve) · <b>VK/OK/Snapchat/Bilibili</b>: sem mecanismo suportado pelo Cobalt</li>
+</ul>
+<p>Status: <b id="antibotStatus">—</b></p>
+<p>
+  <button id="antibotRefresh">Atualizar status</button>
+  <button id="instanceRestart">Reiniciar instância (aplica cookies novos)</button>
+</p>
+<p class="hint">
+  Como exportar: instale <b>Get cookies.txt LOCALLY</b>, exporte logado no serviço,
+  e monte o JSON em <code>~/cobalt-local/cookies.json</code> seguindo
+  <code>~/cobalt-local/cookies.example.json</code> (só os cookies listados por serviço).
+  Arquivo com permissão <code>600</code>. Depois clique em Reiniciar acima.
+</p>
+
+<h2>Sessão — instâncias protegidas</h2>
+<p class="hint">
+  Instâncias protegidas (ex.: <code>https://cobalt-api.meowing.de</code>) exigem autenticação.
+  Caminhos suportados (o desafio Turnstile não roda dentro de extensões — a política da
+  AMO proíbe código remoto e o Cloudflare só aceita o domínio do próprio site):
+</p>
+<ol class="hint">
+  <li><b>Api-Key</b>: peça ao dono da instância e cole no campo acima (tem prioridade);</li>
+  <li><b>Token JWT manual</b>: se o dono fornecer um token <code>Bearer</code>, cole abaixo —
+  a extensão o envia como <code>Authorization: Bearer …</code> até expirar;</li>
+  <li><b>Instância própria/local</b>: sem autenticação (recomendado).</li>
+</ol>
+<label>Bearer JWT manual (opcional)
+  <input id="jwtToken" type="password" placeholder="eyJhbGciOi…" autocomplete="off">
+  <span class="hint">A validade é lida do próprio token e mostrada abaixo.</span>
+</label>
+<p>Status da sessão: <b id="sessionStatus">—</b></p>
+<p>
+  <button id="clearSession">Limpar sessão</button>
+</p>
+
+<script src="cobalt.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

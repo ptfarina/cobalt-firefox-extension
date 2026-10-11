@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<header>
+  <img src="icons/icon-48.png" alt="">
+  <div>
+    <h1>Cobalt Downloader</h1>
+    <p id="instanceLine">—</p>
+    <p id="sessionLine">—</p>
+  </div>
+  <button id="openOptions" title="Configurações">⚙</button>
+</header>
+
+<label class="field">URL da mídia
+  <input id="url" type="url" placeholder="https://www.youtube.com/watch?v=…">
+</label>
+
+<div class="grid">
+  <label>Modo
+    <select id="downloadMode">
+      <option value="auto">auto (vídeo)</option>
+      <option value="audio">audio only</option>
+      <option value="mute">mute (sem áudio)</option>
+    </select>
+  </label>
+  <label>Qualidade
+    <select id="videoQuality">
+      <option value="max">max</option>
+      <option value="4320">4320</option>
+      <option value="2160">2160</option>
+      <option value="1440">1440</option>
+      <option value="1080" selected>1080</option>
+      <option value="720">720</option>
+      <option value="480">480</option>
+      <option value="360">360</option>
+      <option value="240">240</option>
+      <option value="144">144</option>
+    </select>
+  </label>
+  <label>Áudio
+    <select id="audioFormat">
+      <option value="best">best</option>
+      <option value="mp3" selected>mp3</option>
+      <option value="ogg">ogg</option>
+      <option value="wav">wav</option>
+      <option value="opus">opus</option>
+    </select>
+  </label>
+  <label>Nome arquivo
+    <select id="filenameStyle">
+      <option value="basic" selected>basic</option>
+      <option value="pretty">pretty</option>
+      <option value="classic">classic</option>
+      <option value="nerdy">nerdy</option>
+    </select>
+  </label>
+</div>
+
+<div class="row">
+  <button id="download" class="primary">Baixar</button>
+  <button id="testInstance" title="GET / — verifica versão e serviços">Testar instância</button>
+</div>
+
+<div id="status" class="status" hidden></div>
+<div id="picker" class="picker" hidden></div>
+
+<footer>
+  <a id="instancesLink" href="https://instances.cobalt.best" target="_blank">instances.cobalt.best</a>
+  <span>·</span>
+  <a href="https://github.com/imputnet/cobalt/blob/main/docs/api.md" target="_blank">docs da API</a>
+</footer>
+
+<script src="cobalt.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

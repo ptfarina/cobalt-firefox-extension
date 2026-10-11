@@ -1,0 +1,22 @@
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body { width: 340px; margin: 0; padding: 10px 12px; font: 13px/1.45 system-ui, sans-serif; }
+header { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+header img { width: 32px; height: 32px; }
+header h1 { font-size: 15px; margin: 0; }
+header p { margin: 0; font-size: 11px; opacity: .7; word-break: break-all; }
+header button { margin-left: auto; }
+.field { display: block; margin-bottom: 8px; }
+.field input { width: 100%; padding: 6px; margin-top: 2px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+.grid label { display: flex; flex-direction: column; font-size: 12px; }
+.grid select { padding: 5px; }
+.row { display: flex; gap: 6px; margin-bottom: 8px; }
+button { padding: 7px 10px; cursor: pointer; }
+button.primary { background: #0060df; color: #fff; border: 0; border-radius: 4px; flex: 1; }
+.status { padding: 8px; border-radius: 4px; margin-bottom: 8px; background: #f0f0f4; }
+.status.error { background: #fde7e9; }
+.picker { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow: auto; }
+.picker .item { display: flex; gap: 6px; align-items: center; border: 1px solid #ccc; border-radius: 4px; padding: 4px; }
+.picker img { width: 56px; height: 40px; object-fit: cover; }
+footer { font-size: 11px; opacity: .8; display: flex; gap: 6px; }
