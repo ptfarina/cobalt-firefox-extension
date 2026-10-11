@@ -152,7 +152,7 @@ restricted to fixed docker commands, no `shell=True`.
 
 ## License
 
-MIT © 2026 Pedro — see [LICENSE](LICENSE). In short: you may use, copy, modify,
+MIT © 2026 ptfarina — see [LICENSE](LICENSE). In short: you may use, copy, modify,
 merge, publish, distribute, sublicense and sell this software, provided the copyright
 notice is kept; it comes **without any warranty**. `native-host/` and docs are covered
 by the same license. This project is independent from Cobalt itself
@@ -177,7 +177,8 @@ Then submit at https://addons.mozilla.org/developers/ (listed channel).
 
 ## Structure
 
-- `manifest.json` (MV2, `browser_specific_settings.gecko`)
+- `manifest.json` (MV2, `browser_specific_settings.gecko`, `default_locale: en`)
+- `_locales/en` + `_locales/pt_BR` — full UI i18n (extension picks the browser language)
 - `cobalt.js` — shared helpers: API calls, auth headers, session/JWT, URL allow-list
 - `background.js` — context menus + local lifecycle (ensure-up/heartbeat/stop) + download tracking
 - `popup.html/js/css` — quick UI (URL, mode, quality, progress, picker)

@@ -9,6 +9,26 @@ var Cobalt = (() => {
     heartbeatMinutes: 2
   };
 
+  function T(key, subs) {
+    try {
+      const B = (typeof browser !== "undefined") ? browser : chrome;
+      const s = B.i18n.getMessage(key, subs);
+      return s || key;
+    } catch {
+      return key;
+    }
+  }
+
+  /** Aplica data-i18n / data-i18n-ph / data-i18n-title / data-i18n-html (estático, do catálogo). */
+  function applyI18n(root) {
+    const doc = root || (typeof document !== "undefined" ? document : null);
+    if (!doc || !doc.querySelectorAll) return;
+    doc.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = T(el.getAttribute("data-i18n")); });
+    doc.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.setAttribute("placeholder", T(el.getAttribute("data-i18n-ph"))); });
+    doc.querySelectorAll("[data-i18n-title]").forEach((el) => { el.setAttribute("title", T(el.getAttribute("data-i18n-title"))); });
+    doc.querySelectorAll("[data-i18n-html]").forEach((el) => { el.innerHTML = T(el.getAttribute("data-i18n-html")); });
+  }
+
   function normalizeInstance(raw) {
     let u = (raw || "").trim().replace(/\/+$/, "");
     if (!u) return "";
@@ -39,11 +59,8 @@ var Cobalt = (() => {
   }
 
   function frontendWarning(res) {
-    const status = res && res.status ? ` (HTTP ${res.status})` : "";
-    return `A instância retornou HTML${status} em vez de JSON. ` +
-      "Você informou a URL do site/frontend (ex.: cobalt.meowing.de) e não a URL da API. " +
-      "O frontend web não é a API: configure a URL base da API (ex.: https://cobalt-api.meowing.de, " +
-      "sua própria instância ou uma API comunitária com permissão). Também prefira https:// a http://.";
+    const http = res && res.status ? T("feHttp", String(res.status)) : "";
+    return T("feHtml", http);
   }
 
   async function readApiJson(res) {
@@ -93,21 +110,21 @@ var Cobalt = (() => {
 
   function friendlyError(code) {
     const map = {
-      "api.auth.api-key.missing": "Esta instância exige Api-Key. Informe a chave nas opções.",
-      "api.auth.bearer.missing": "Esta instância exige autenticação. Configure um Api-Key ou token JWT nas opções.",
-      "error.api.auth.jwt.missing": "Sessão ausente/expirada. Cole um Api-Key ou token JWT válido nas opções.",
-      "error.api.auth.turnstile.missing": "Esta instância exige autenticação. Configure um Api-Key ou token JWT nas opções.",
-      "api.auth.invalid": "Chave/token inválido. Confira o Api-Key ou cole um novo token JWT.",
-      "api.auth.ratelimit": "Limite de requisições excedido. Aguarde e tente de novo.",
-      "error.api.link.invalid": "Link inválido ou não suportado pela instância.",
-      "error.api.service.unsupported": "Serviço não suportado por esta instância.",
-      "error.api.fetch.fail": "A instância não conseguiu ler o link (conteúdo removido, bloqueio anti-bot ou login exigido pelo serviço).",
-      "error.api.fetch.empty": "Sem mídia pública nesse link (removido, privado, com restrição de região ou login exigido).",
-      "error.api.fetch.critical": "Falha ao extrair — o serviço costuma exigir login. Tente outro link ou configure cookies.json na instância.",
-      "error.api.rate_exceeded": "Limite da instância excedido. Aguarde ~1 min e tente de novo (evite disparos em paralelo).",
-      "extension.missing-instance": "Configure a URL da instância primeiro."
+      "api.auth.api-key.missing": "errAuthApiKey",
+      "api.auth.bearer.missing": "errAuthBearer",
+      "error.api.auth.jwt.missing": "errAuthJwt",
+      "error.api.auth.turnstile.missing": "errAuthTurnstile",
+      "api.auth.invalid": "errAuthInvalid",
+      "api.auth.ratelimit": "errAuthRatelimit",
+      "error.api.link.invalid": "errLinkInvalid",
+      "error.api.service.unsupported": "errServiceUnsupported",
+      "error.api.fetch.fail": "errFetchFail",
+      "error.api.fetch.empty": "errFetchEmpty",
+      "error.api.fetch.critical": "errFetchCritical",
+      "error.api.rate_exceeded": "errRateExceeded",
+      "extension.missing-instance": "errMissingInstance"
     };
-    return map[code] || code;
+    return map[code] ? T(map[code]) : code;
   }
 
   /** Só permite http(s) — bloqueia javascript:/data:/blob: vindos da API (instância maliciosa). */
@@ -142,7 +159,7 @@ var Cobalt = (() => {
       const m = String((e && e.message) || e);
       if (/no such native application/i.test(m)) {
         return { ok: false, error: "native-missing",
-                 message: "Host nativo não instalado. Rode native-host/install-host.sh na pasta da extensão." };
+                 message: T("errNativeMissing") };
       }
       return { ok: false, error: "native-failed", message: m.slice(0, 200) };
     }
@@ -154,12 +171,13 @@ var Cobalt = (() => {
     const r = await localHost(B, { cmd: "ensure-up", wait: 60 });
     if (r && r.ok) return { ok: true, version: r.version };
     const msg = (r && (r.message || r.error)) || "falha desconhecida";
-    return { ok: false,
-             message: "Instância local indisponível: " + msg + " (daemon docker rodando? container criado via install-host.sh?)" };
+    return { ok: false, message: T("errLocalDownFull", msg) };
   }
 
   return {
     LOCAL,
+    T,
+    applyI18n,
     isSafeUrl,
     isLocalUrl,
     localHost,

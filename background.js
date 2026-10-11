@@ -125,7 +125,7 @@ B.downloads && B.downloads.onChanged && B.downloads.onChanged.addListener(async 
   } catch {}
   if (!entry) return;
   if (cur === "complete") {
-    notify("Cobalt: download concluído", entry.filename);
+    notify(Cobalt.T("notifDoneT"), entry.filename);
     return;
   }
   let reason = "interrompido";
@@ -138,18 +138,18 @@ B.downloads && B.downloads.onChanged && B.downloads.onChanged.addListener(async 
 
 const fallbackTabs = {}; // notificationId -> url do link direto
 function notifyFailure(entry, reason) {
-  const msg = `${entry.filename} — falhou (${reason}). Clique para abrir o link direto.`;
+  const msg = Cobalt.T("notifFailM", [entry.filename, reason]);
   try {
     const p = B.notifications.create({
       type: "basic",
       iconUrl: "icons/icon-48.png",
-      title: "Cobalt: download falhou",
+      title: Cobalt.T("notifFailT"),
       message: String(msg).slice(0, 200),
-      buttons: [{ title: "Abrir link" }]
+      buttons: [{ title: Cobalt.T("notifOpenLink") }]
     });
     Promise.resolve(p).then((nid) => { fallbackTabs[nid] = entry.url; });
   } catch {
-    notify("Cobalt: download falhou", msg);
+    notify(Cobalt.T("notifFailT"), msg);
   }
 }
 
@@ -178,15 +178,14 @@ function notify(title, message) {
 async function handleDownload(sourceUrl) {
   const s = await getSettings();
   if (!s.instanceUrl) {
-    notify("Cobalt: instância não configurada",
-      "Abra o popup ou as opções e informe a URL da instância (ex.: sua instância própria ou uma de instances.cobalt.best).");
+    notify(Cobalt.T("notifNoInstanceT"), Cobalt.T("notifNoInstanceM"));
     B.runtime.openOptionsPage && B.runtime.openOptionsPage();
     return { status: "error", error: { code: "extension.missing-instance" } };
   }
   if (Cobalt.isLocalUrl(s.instanceUrl) && s.localAuto !== false) {
     const up = await Cobalt.ensureLocalIfNeeded(B, Cobalt.normalizeInstance(s.instanceUrl));
     if (!up.ok) {
-      notify("Cobalt: instância local", up.message);
+      notify(Cobalt.T("notifLocalT"), up.message);
       return { status: "error", error: { code: "extension.local-down" } };
     }
     localActive = true;
@@ -221,17 +220,16 @@ async function handleDownload(sourceUrl) {
     if (Cobalt.needsAuth(code) && !(s.apiKey || "").trim()) {
       // Sessão (JWT) ausente/expirada: limpa e orienta a reconfigurar.
       try { await B.storage.sync.set({ sessionToken: "", sessionExp: 0 }); } catch {}
-      notify("Cobalt: autenticação necessária", Cobalt.friendlyError(code));
+      notify(Cobalt.T("notifAuthT"), Cobalt.friendlyError(code));
     } else {
-      notify("Cobalt: falha no download", friendlyError(code));
+      notify(Cobalt.T("notifFailT"), friendlyError(code));
     }
     return json;
   } catch (e) {
     if (e && e.message === "not-json-frontend") {
-      notify("Cobalt: URL do frontend, não da API",
-        "A URL configurada retornou o site (HTML). Informe a URL base da API, não a do frontend web. Use https://.");
+      notify(Cobalt.T("notifFrontendT"), Cobalt.T("notifFrontendM"));
     } else {
-      notify("Cobalt: erro de rede/autenticação", String((e && e.message) || e));
+      notify(Cobalt.T("notifNetT"), String((e && e.message) || e));
     }
     return { status: "error", error: { code: "extension.fetch-failed", context: { message: String((e && e.message) || e) } } };
   }
@@ -250,19 +248,19 @@ function createMenus() {
   try {
     B.contextMenus.create({
       id: "cobalt-page",
-      title: "Baixar mídia desta página (Cobalt)",
+      title: Cobalt.T("menuPage"),
       contexts: ["page"],
       documentUrlPatterns: SUPPORTED_PATTERNS
     });
     B.contextMenus.create({
       id: "cobalt-link",
-      title: "Baixar mídia deste link (Cobalt)",
+      title: Cobalt.T("menuLink"),
       contexts: ["link"],
       targetUrlPatterns: SUPPORTED_PATTERNS
     });
     B.contextMenus.create({
       id: "cobalt-video",
-      title: "Baixar vídeo/áudio (Cobalt)",
+      title: Cobalt.T("menuMedia"),
       contexts: ["video", "audio"]
     });
   } catch (e) { console.warn("menus:", e); }

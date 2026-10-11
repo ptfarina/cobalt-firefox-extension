@@ -38,6 +38,11 @@ programmatically (flat download-arrow glyph); no layered source exists.
   1.3.0 — manifest has no custom CSP). No `eval`, no `innerHTML` with external
   data (only `textContent`), no inline scripts. API-returned URLs are
   allow-listed to `http(s)` before download/open (blocks `javascript:`/`data:`).
+- i18n via `_locales/en` (default) + `_locales/pt_BR`, applied through
+  `data-i18n*` attributes. The single `innerHTML` assignment (flagged
+  UNSAFE_VAR_ASSIGNMENT) only ever receives **static catalog strings from the
+  package itself** (never API/network data, which exclusively uses
+  `textContent`) — same trust level as the surrounding code.
 
 **Data & consent:** declares `websiteActivity` (the media URL is POSTed only to
 the user-configured instance, only on explicit download click; blank instance =

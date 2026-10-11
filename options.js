@@ -1,6 +1,8 @@
-/* Options — Cobalt.* vem de cobalt.js (todo o código é local, sem scripts remotos). */
+/* Options — Cobalt.* vem de cobalt.js (todo o código é local, sem scripts remotos).
+ * Textos via Cobalt.T() / _locales (en padrão, pt_BR). */
 const B = (typeof browser !== "undefined") ? browser : chrome;
 const $ = (id) => document.getElementById(id);
+const T = (k, ...subs) => Cobalt.T(k, subs.length ? subs : undefined);
 
 const DEFAULTS = {
   instanceUrl: "", apiKey: "",
@@ -11,6 +13,7 @@ const DEFAULTS = {
 };
 
 async function restore() {
+  Cobalt.applyI18n(document);
   const s = await B.storage.sync.get(DEFAULTS);
   $("instanceUrl").value = s.instanceUrl;
   $("apiKey").value = s.apiKey;
@@ -29,13 +32,13 @@ function renderSessionStatus(s) {
   const el = $("sessionStatus");
   const base = Cobalt.normalizeInstance(s.instanceUrl || $("instanceUrl").value);
   if ((s.apiKey || "").trim()) {
-    el.textContent = "usando Api-Key (token manual desnecessário)";
+    el.textContent = T("optSessionUsingKey");
   } else if (Cobalt.isSessionValid(s, base)) {
-    el.textContent = "válida até " + new Date(s.sessionExp).toLocaleString();
+    el.textContent = T("optAuthSavedUntil", new Date(s.sessionExp).toLocaleString());
   } else if (s.sessionToken) {
-    el.textContent = "expirado — cole um token válido";
+    el.textContent = T("optSessionExpired");
   } else {
-    el.textContent = "ausente";
+    el.textContent = T("optSessionAbsent");
   }
 }
 
@@ -64,28 +67,28 @@ async function save() {
     localAuto: $("localAuto").checked,
     sessionToken, sessionExp, sessionInstance
   });
-  $("msg").textContent = "Salvo!";
+  $("msg").textContent = T("optSaved");
   renderSessionStatus(await B.storage.sync.get(DEFAULTS));
   setTimeout(() => ($("msg").textContent = ""), 2000);
 }
 
 async function test() {
   const base = Cobalt.normalizeInstance($("instanceUrl").value);
-  if (!base) { $("msg").textContent = "Informe a URL primeiro."; return; }
-  $("msg").textContent = "Testando…";
+  if (!base) { $("msg").textContent = T("optNeedUrl"); return; }
+  $("msg").textContent = T("optTesting");
   try {
     const { json, status } = await Cobalt.fetchInstanceInfo(base);
     if (json.cobalt) {
       const c = json.cobalt;
-      $("msg").textContent = `OK: Cobalt ${c.version}, ${c.services.length} serviços.` +
-        (c.turnstileSitekey ? " Protegida: configure Api-Key ou JWT manual." : " Aberta (sem auth).");
+      $("msg").textContent = T("optTestOk", String(c.version), String(c.services.length)) + " " +
+        (c.turnstileSitekey ? T("optProtected") : T("optOpenInstance"));
     } else {
-      $("msg").textContent = `HTTP ${status}: resposta inesperada.`;
+      $("msg").textContent = T("testUnexpected", String(status));
     }
   } catch (e) {
     $("msg").textContent = e && e.message === "not-json-frontend"
-      ? "URL do site/frontend, não da API (retornou HTML)."
-      : "Falha: " + (e && e.message || e);
+      ? T("optNotFrontend")
+      : T("optLocalFailed", (e && e.message) || e);
   }
 }
 
@@ -93,69 +96,69 @@ async function clearSession() {
   await B.storage.sync.set({ sessionToken: "", sessionExp: 0, sessionInstance: "" });
   $("jwtToken").value = "";
   renderSessionStatus(await B.storage.sync.get(DEFAULTS));
-  $("msg").textContent = "Sessão limpa.";
+  $("msg").textContent = T("optSessionCleaned");
   setTimeout(() => ($("msg").textContent = ""), 2000);
 }
 
 async function refreshAntibot() {
   const el = $("antibotStatus");
-  el.textContent = "consultando…";
+  el.textContent = T("optLocalChecking");
   const r = await Cobalt.localHost(B, { cmd: "status" });
   if (!r || r.error === "native-missing") {
-    el.textContent = "host nativo não instalado";
+    el.textContent = T("optLocalNoHost");
     return;
   }
-  if (!r.ok) { el.textContent = "erro: " + (r.message || r.error); return; }
+  if (!r.ok) { el.textContent = T("optLocalError", (r.message || r.error)); return; }
   const stack = r.stack || {};
-  const yt = stack["cobalt-yt-session"] ? "poToken: gerador rodando" : "poToken: gerador parado";
+  const yt = stack["cobalt-yt-session"] ? T("optYtOn") : T("optYtOff");
   const ck = r.cookies || {};
-  const cookies = ck.present
-    ? (ck.services.length ? "cookies: " + ck.services.join(", ") : "cookies: arquivo vazio")
-    : "cookies: ausente (~/cobalt-local/cookies.json)";
+  const cookies = T("optCk", ck.present
+    ? (ck.services.length ? ck.services.join(", ") : T("optCkEmpty"))
+    : T("optCkAbsent"));
   el.textContent = `${yt} · ${cookies}`;
 }
 
 async function instanceRestart() {
-  $("antibotStatus").textContent = "reiniciando…";
+  $("antibotStatus").textContent = T("optRestarting");
   await Cobalt.localHost(B, { cmd: "stop" });
   const r = await Cobalt.localHost(B, { cmd: "ensure-up", wait: 120 });
   await refreshAntibot();
   await refreshLocalStatus();
-  $("msg").textContent = r && r.ok ? "Instância reiniciada." : "Falha: " + ((r && (r.message || r.error)) || "?");
+  $("msg").textContent = r && r.ok ? T("optRestarted") : T("optLocalFailed", ((r && (r.message || r.error)) || "?"));
 }
 
 async function refreshLocalStatus() {
   const el = $("localStatus");
-  el.textContent = "consultando…";
+  el.textContent = T("optLocalChecking");
   const r = await Cobalt.localHost(B, { cmd: "status" });
   if (!r || r.error === "native-missing") {
-    el.textContent = "host nativo não instalado (rode native-host/install-host.sh)";
+    el.textContent = T("optLocalNoHost");
   } else if (!r.ok) {
-    el.textContent = "erro: " + (r.message || r.error);
+    el.textContent = T("optLocalError", (r.message || r.error));
   } else if (r.running) {
-    el.textContent = `rodando (Cobalt ${r.version || "?"})`;
+    el.textContent = T("optLocalRunning", String(r.version || "?"));
   } else {
-    el.textContent = "parada";
+    el.textContent = T("optLocalStopped");
   }
 }
 
 async function localStart() {
-  $("localStatus").textContent = "subindo…";
+  $("localStatus").textContent = T("optLocalStarting");
   const r = await Cobalt.localHost(B, { cmd: "ensure-up", wait: 90 });
   await refreshLocalStatus();
-  $("msg").textContent = r && r.ok ? `Instância local no ar (Cobalt ${r.version}).` : "Falha: " + ((r && (r.message || r.error)) || "?");
+  $("msg").textContent = r && r.ok ? T("optLocalStarted", String(r.version)) : T("optLocalFailed", ((r && (r.message || r.error)) || "?"));
 }
 
 async function localStop() {
   const r = await Cobalt.localHost(B, { cmd: "stop" });
   await refreshLocalStatus();
-  $("msg").textContent = r && r.ok ? "Instância local parada." : "Falha: " + ((r && (r.message || r.error)) || "?");
+  $("msg").textContent = r && r.ok ? T("optLocalStoppedMsg") : T("optLocalFailed", ((r && (r.message || r.error)) || "?"));
 }
 
 async function localUse() {
   await B.storage.sync.set({ instanceUrl: Cobalt.LOCAL.url });
   $("instanceUrl").value = Cobalt.LOCAL.url;
-  $("msg").textContent = "Instância local selecionada. Salve (ou já vale para o popup).";
+  $("msg").textContent = T("optLocalUse");
   await save();
 }
 

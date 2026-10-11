@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <link rel="stylesheet" href="popup.css">
@@ -8,26 +8,26 @@
 <header>
   <img src="icons/icon-48.png" alt="">
   <div>
-    <h1>Cobalt Downloader</h1>
+    <h1 data-i18n="popupTitle">Cobalt Downloader</h1>
     <p id="instanceLine">—</p>
     <p id="sessionLine">—</p>
   </div>
-  <button id="openOptions" title="Configurações">⚙</button>
+  <button id="openOptions" data-i18n-title="optionsTooltip" title="Settings">⚙</button>
 </header>
 
-<label class="field">URL da mídia
+<label class="field"><span data-i18n="mediaUrl">Media URL</span>
   <input id="url" type="url" placeholder="https://www.youtube.com/watch?v=…">
 </label>
 
 <div class="grid">
-  <label>Modo
+  <label><span data-i18n="mode">Mode</span>
     <select id="downloadMode">
-      <option value="auto">auto (vídeo)</option>
-      <option value="audio">audio only</option>
-      <option value="mute">mute (sem áudio)</option>
+      <option value="auto" data-i18n="modeAuto">auto (video)</option>
+      <option value="audio" data-i18n="modeAudio">audio only</option>
+      <option value="mute" data-i18n="modeMute">mute (no audio)</option>
     </select>
   </label>
-  <label>Qualidade
+  <label><span data-i18n="quality">Quality</span>
     <select id="videoQuality">
       <option value="max">max</option>
       <option value="4320">4320</option>
@@ -41,7 +41,7 @@
       <option value="144">144</option>
     </select>
   </label>
-  <label>Áudio
+  <label><span data-i18n="audioFmt">Audio</span>
     <select id="audioFormat">
       <option value="best">best</option>
       <option value="mp3" selected>mp3</option>
@@ -50,7 +50,7 @@
       <option value="opus">opus</option>
     </select>
   </label>
-  <label>Nome arquivo
+  <label><span data-i18n="fileNameStyle">Filename</span>
     <select id="filenameStyle">
       <option value="basic" selected>basic</option>
       <option value="pretty">pretty</option>
@@ -61,8 +61,8 @@
 </div>
 
 <div class="row">
-  <button id="download" class="primary">Baixar</button>
-  <button id="testInstance" title="GET / — verifica versão e serviços">Testar instância</button>
+  <button id="download" class="primary" data-i18n="download">Download</button>
+  <button id="testInstance" data-i18n="testInstance">Test instance</button>
 </div>
 
 <div id="status" class="status" hidden></div>
@@ -71,7 +71,7 @@
 <footer>
   <a id="instancesLink" href="https://instances.cobalt.best" target="_blank">instances.cobalt.best</a>
   <span>·</span>
-  <a href="https://github.com/imputnet/cobalt/blob/main/docs/api.md" target="_blank">docs da API</a>
+  <a href="https://github.com/imputnet/cobalt/blob/main/docs/api.md" target="_blank" data-i18n="apiDocs">API docs</a>
 </footer>
 
 <script src="cobalt.js"></script>
