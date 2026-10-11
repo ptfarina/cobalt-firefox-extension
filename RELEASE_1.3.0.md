@@ -1,30 +1,30 @@
-# Compatibilidade + Notas da versão 1.3.0 (AMO)
+# Compatibility + 1.3.0 release notes (AMO)
 
-## Compatibilidade (campo Version Compatibility)
+## Compatibility (Version Compatibility field)
 
-- **Firefox para desktop: 142.0 ou superior** (`strict_min_version: 142.0`,
-  exigido pelo campo `data_collection_permissions`)
-- **Firefox para Android: 142.0 ou superior** — núcleo completo (popup,
-  download com progresso, picker, opções). Ressalvas no Android: itens de menu
-  de contexto dependem do suporte do SO e o recurso de **instância local via
-  Docker não se aplica** (sem `nativeMessaging` no Android — a extensão informa
-  isso e segue funcionando com instâncias remotas).
-- **Manifest V2** (suportado pelo Firefox, sem remoção anunciada).
-- Sem dependência de SO além do Firefox (o Docker/host nativo é opcional e
-  só para a instância local no desktop Linux; testado no Linux).
+- **Firefox desktop: 142.0 or later** (`strict_min_version: 142.0`,
+  required by `data_collection_permissions`)
+- **Firefox for Android: 142.0 or later** — full core (popup,
+  download with progress, picker, options). Android caveats: context-menu
+  items depend on OS support and the **local Docker instance feature does not
+  apply** (no `nativeMessaging` on Android — the extension says so and keeps
+  working with remote instances).
+- **Manifest V2** (supported by Firefox, no announced removal).
+- No OS dependency beyond Firefox (Docker/native host is optional and
+  only for the local instance on Linux desktop; tested on Linux).
 
-## Notas da versão 1.3.0 (campo Release Notes) — primeira versão pública
+## 1.3.0 release notes (Release Notes field) — first public release
 
-Versão inicial pública da extensão.
+First public release of the extension.
 
-- Downloads de vídeos e áudios pela API atual do Cobalt (`imputnet/cobalt`):
-  respostas `tunnel`/`redirect` com **progresso real**, `picker` com lista de
-  escolha e mensagens de erro traduzidas.
-- Funciona com **qualquer instância**: própria, comunitária ou local via Docker
-  (sobe ao abrir o Firefox e para ao fechar; requer instalador à parte).
-- **Autenticação** para instâncias protegidas via Api-Key ou token JWT manual,
-  com leitura de validade e botão de teste da instância (versão + serviços).
-- **Privacidade**: com a instância em branco (padrão), nenhuma transmissão de
-  rede é feita; política de privacidade inclusa na listagem.
-- Pacote 100% autocontido (sem código remoto, sem compilação) — validação
-  automatizada da Mozilla: 0 erros, 0 alertas, 0 notícias.
+- Video and audio downloads via the current Cobalt API (`imputnet/cobalt`):
+  `tunnel`/`redirect` responses with **real progress**, `picker` with a choice
+  list, and translated error messages.
+- Works with **any instance**: your own, a community one, or a local one via
+  Docker (starts when Firefox opens, stops on close; requires separate installer).
+- **Authentication** for protected instances via Api-Key or manual JWT token,
+  with validity readout and an instance check button (version + services).
+- **Privacy**: with a blank instance (default), no network transmission happens;
+  privacy policy included in the listing.
+- Fully self-contained package (no remote code, no build) — Mozilla automated
+  validation: 0 errors, 0 warnings, 0 notices.

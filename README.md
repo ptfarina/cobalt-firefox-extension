@@ -1,167 +1,186 @@
 # Cobalt Media Downloader (Firefox)
 
-Extensão para Firefox que usa a **API atual do Cobalt** ([imputnet/cobalt](https://github.com/imputnet/cobalt), docs em `docs/api.md`):
+A Firefox extension that uses the **current Cobalt API** ([imputnet/cobalt](https://github.com/imputnet/cobalt), see `docs/api.md`):
 
-- `POST {instância}/` com `Accept: application/json` + `Content-Type: application/json`
-- Respostas `tunnel` / `redirect` → baixa via `downloads.download`
-- `picker` → lista de itens para escolha (popup + `picker.html`)
-- `local-processing` → lista de túneis
-- `error` (incl. `api.auth.*`) → mensagem amigável
-- `GET {instância}/` → teste de instância (versão + serviços)
-- Suporte a `Authorization: Api-Key …` / `Bearer …` (instâncias protegidas)
+- `POST {instance}/` with `Accept: application/json` + `Content-Type: application/json`
+- `tunnel` / `redirect` responses → downloaded via `downloads.download`
+- `picker` → item list to choose from (popup + `picker.html`)
+- `local-processing` → tunnel list
+- `error` (incl. `api.auth.*`) → friendly message
+- `GET {instance}/` → instance check (version + services)
+- `Authorization: Api-Key …` / `Bearer …` support (protected instances)
 
-## Por que uma nova extensão?
+## Why another extension?
 
-| Extensão existente | Situação (out/2026) |
+| Existing extension | Status (Oct 2026) |
 |---|---|
-| `dimdenGD/cobalt-extension` (AMO `cobalt-downloader` v1.0.7, nov/2024) | Usa endpoints antigos `GET /api/serverInfo` e `POST /api/json` (v7, desligado em 11/11/2024) + `api.cobalt.tools` com bot-protection. Parada desde 22/11/2024. **Quebrada.** |
-| `kivirnz/cobalt-extension-fixed` (fork) | Mesmo código antigo, só troca default p/ `cobalt.meowing.de`; `getApiVersion(/api/serverInfo)` falha na API nova → cai no fallback de abrir `?u=` na web. Manifest MV3 com `service_worker` (incompatível com Firefox) e `host_permissions` fixo. Commits de 2025 só no README. **Não mantida funcionalmente.** |
-| `Solyphonous/CobaltExtension` (AMO `cobaltextension` v1.12.0) | O próprio README avisa que a API principal caiu em 14/10/2024. Último commit 28/10/2024. **Abandonada.** |
-| `quick cobalt`, `Cobalt Downloader for Rutube…`, `for YouTube` | Só abrem `cobalt.tools` com a URL — **não usam a API**. |
+| `dimdenGD/cobalt-extension` (AMO `cobalt-downloader` v1.0.7, Nov 2024) | Uses legacy `GET /api/serverInfo` and `POST /api/json` endpoints (v7, shut down 11/11/2024) + `api.cobalt.tools` with bot protection. Stalled since 11/22/2024. **Broken.** |
+| `kivirnz/cobalt-extension-fixed` (fork) | Same old code, only swaps the default to `cobalt.meowing.de`; `getApiVersion(/api/serverInfo)` fails on the new API → falls back to opening `?u=` on the web. MV3 manifest with `service_worker` (incompatible with Firefox) and fixed `host_permissions`. 2025 commits are README-only. **Not functionally maintained.** |
+| `Solyphonous/CobaltExtension` (AMO `cobaltextension` v1.12.0) | Its own README warns the main API went down on 10/14/2024. Last commit 10/28/2024. **Abandoned.** |
+| `quick cobalt`, `Cobalt Downloader for Rutube…`, `for YouTube` | Just open `cobalt.tools` with the URL — **they don't use the API**. |
 
-Ou seja: nenhuma extensão do Firefox usa corretamente a API atual (`POST /`, `status: tunnel|redirect|picker|error`, auth Api-Key/Bearer). Daí esta extensão.
+In short: no Firefox extension correctly uses the current API (`POST /`, `status: tunnel|redirect|picker|error`, Api-Key/Bearer auth). Hence this one.
 
-## Instalação temporária (teste)
+## Temporary install (testing)
 
-1. Abra `about:debugging#/runtime/this-firefox`
-2. **Carregar extensão temporária** → selecione `manifest.json` desta pasta.
-3. Abra as **Opções** e configure:
-   - URL da instância (sua própria via [run-an-instance.md](https://github.com/imputnet/cobalt/blob/main/docs/run-an-instance.md), ou uma comunitária de https://instances.cobalt.best com permissão do dono).
-   - Api-Key, se a instância exigir.
-4. Use o botão da barra, o menu de contexto (página/link/vídeo) ou o popup.
+1. Open `about:debugging#/runtime/this-firefox`
+2. **Load Temporary Add-on** → select this folder's `manifest.json`.
+3. Open **Options** and configure:
+   - Instance URL (your own via [run-an-instance.md](https://github.com/imputnet/cobalt/blob/main/docs/run-an-instance.md), or a community one from https://instances.cobalt.best with the owner's permission).
+   - Api-Key, if the instance requires it.
+4. Use the toolbar button, the context menu (page/link/video), or the popup.
 
-> A instância oficial `api.cobalt.tools` **não** é liberada para terceiros (bot-protection, exige permissão). Não a use como default.
+> The official `api.cobalt.tools` instance is **not** open to third parties (bot protection, requires permission). Don't use it as default.
 
-## Instância local (recomendado — sobe com o Firefox, para ao fechar)
+## Local instance (recommended — starts with Firefox, stops on close)
 
-Arquitetura: extensão → host nativo (`native-host/cobalt_host.py`, via `nativeMessaging`)
-→ container docker `cobalt-local` (imagem `ghcr.io/imputnet/cobalt:11`, só API na 9000,
-bind em `127.0.0.1`, sem auth — localhost é confiável).
+Architecture: extension → native host (`native-host/cobalt_host.py`, via `nativeMessaging`)
+→ docker container `cobalt-local` (image `ghcr.io/imputnet/cobalt:11`, API-only on 9000,
+bound to `127.0.0.1`, no auth — localhost is trusted).
 
-Ciclo de vida (zero custo com o Firefox fechado):
-- abrir o Firefox → `ensure-up` (sobe e espera a API responder, até ~60s na 1ª vez);
-- a cada download com URL local → garante de pé antes do `POST /`;
-- heartbeat a cada 2 min enquanto aberto (só se a instância local foi usada na sessão);
-- **fechar o Firefox → `stop` imediato** (`runtime.onSuspend`) + supervisor do host
-  que para o container após ~6 min sem heartbeat (cobre crash, kill e suspensão).
+Lifecycle (zero cost with Firefox closed):
+- opening Firefox → `ensure-up` (starts and waits for the API, up to ~60s on first run);
+- every download with a local URL → ensured up before `POST /`;
+- heartbeat every 2 min while open (only if the local instance was used this session);
+- **closing Firefox → immediate `stop`** (`runtime.onSuspend`) + host supervisor
+  that stops the container after ~6 min without heartbeat (covers crash, kill, suspend).
 
-Instalação (uma vez):
+One-time setup:
 ```bash
-sudo systemctl start docker        # daemon precisa estar rodando (consome quase nada parado)
+sudo systemctl start docker        # daemon must be running (near-zero cost when idle)
 cd cobalt-firefox-extension/native-host && ./install-host.sh
 ```
-O script registra o host nativo em `~/.mozilla/native-messaging-hosts/`,
-baixa a imagem e cria o container (com `--restart no`: nunca sobe no boot, só via Firefox).
-Depois, nas Opções da extensão: **Usar instância local** (preenche `http://localhost:9000`).
+The script registers the native host in `~/.mozilla/native-messaging-hosts/`,
+pulls the image and creates the container (`--restart no`: never starts on boot, only via Firefox).
+Then, in the extension Options: **Use local instance** (fills `http://localhost:9000`).
 
-Atualizar a imagem: `docker pull ghcr.io/imputnet/cobalt:11` (com o container parado).
-Logs: `docker logs cobalt-local`. A porta só escuta em `127.0.0.1` (não expõe na rede).
+Update the image: `docker pull ghcr.io/imputnet/cobalt:11` (with the container stopped).
+Logs: `docker logs cobalt-local`. The port only listens on `127.0.0.1` (not exposed to the network).
 
-## Anti-bot e logins (o que foi feito e o limite de cada um)
+## Anti-bot and logins (what was done, limits of each)
 
-A instância local agora sobe em stack: `cobalt-local` (API) + `cobalt-yt-session`
-(gerador de poToken do YouTube, `YOUTUBE_SESSION_SERVER` já apontado). Custo parado:
-~95 MB somados, 0% CPU — e tudo para junto com o Firefox.
+The local instance runs as a stack: `cobalt-local` (API) + `cobalt-yt-session`
+(YouTube poToken generator, `YOUTUBE_SESSION_SERVER` already pointed). Idle cost:
+~95 MB combined, 0% CPU — and everything stops with Firefox.
 
-| Serviço | Mecanismo | Estado aqui |
+| Service | Mechanism | Status here |
 |---|---|---|
-| YouTube | poToken automático | ❌ gerador bloqueado neste IP (BotGuard estoura timeout — mesmo bloqueio que esvazia os streams); saída: cookies (abaixo) |
-| YouTube | `cookies.json` (sua sessão) | ⏳ configurado (`COOKIE_PATH` montado, `cookies loaded successfully!`), **falta você preencher** |
-| Instagram / Reddit / Twitter-X / Vimeo | `cookies.json` | ⏳ mesmo esquema (ver `~/cobalt-local/cookies.example.json`) |
-| TikTok | — | fora de escopo (botão direito já resolve p/ você) |
-| VK / OK / Snapchat / Bilibili | — | sem mecanismo no Cobalt; seguem bloqueados |
+| YouTube | automatic poToken | ❌ generator blocked on this IP (BotGuard times out — same block that empties streams); way out: cookies (below) |
+| YouTube | `cookies.json` (your session) | ⏳ configured (`COOKIE_PATH` mounted, `cookies loaded successfully!`), **you still need to fill it in** |
+| Instagram / Reddit / Twitter-X / Vimeo | `cookies.json` | ⏳ same scheme (see `~/cobalt-local/cookies.example.json`) |
+| TikTok | — | out of scope (right-clicking the video already works) |
+| VK / OK / Snapchat / Bilibili | — | no mechanism in Cobalt; still blocked |
 
-Como preencher (5 min, só com suas contas): instale **Get cookies.txt LOCALLY** no
-Firefox, exporte logado no serviço, e monte `~/cobalt-local/cookies.json` no formato
-do `cookies.example.json` (só os cookies indicados por serviço; ex. YouTube: valores
-de `cookie` e `b`). Permissão `600`. Depois: Opções → **Reiniciar instância**.
-O status (gerador + serviços com cookies) aparece em Opções → Anti-bot. Privacidade:
-cookies são sessão da sua conta — nunca saem da sua máquina (bind `127.0.0.1`).
+How to fill in (5 min, only with your own accounts): install **Get cookies.txt LOCALLY** in
+Firefox, export while logged into the service, and build `~/cobalt-local/cookies.json` in
+the `cookies.example.json` format (only the cookies listed per service; e.g. YouTube: the
+`cookie` and `b` values). Permission `600`. Then: Options → **Restart instance**.
+Status (generator + services with cookies) shows in Options → Anti-bot. Privacy:
+cookies are your account session — they never leave your machine (`127.0.0.1` bind).
 
-## Compatibilidade por serviço (testado em 11/10/2026, instância local 11.7.1)
+## Per-service compatibility (tested 10/11/2026, local instance 11.7.1)
 
-Matriz real de `POST /` (mesma chamada que a extensão faz) + UI do picker validada
-com resposta verdadeira do Instagram (10 itens):
+Real `POST /` matrix (the same call the extension makes) + picker UI validated
+with a genuine 10-item Instagram response:
 
-| Serviço | Resultado | Detalhe |
+| Service | Result | Detail |
 |---|---|---|
-| YouTube | ⚠️ parcial | `tunnel` OK (metadados), mas o stream veio vazio deste IP — típico de bloqueio anti-bot; resolve com `cookies.json` na instância (ver abaixo) |
-| Twitter/X | ✅ | `redirect` direto p/ `video.twimg.com` |
-| TikTok | ❌ | `fetch.fail` ×3 (bloqueio anti-bot do TikTok) |
-| Vimeo | ❌ | `fetch.fail` ×3, inclusive URL fresca (bloqueio) |
-| Reddit | ❌ | `fetch.fail` (bloqueio/conteúdo removido) |
-| SoundCloud | ✅ | `tunnel` MP3 válido (3,8 MB, com ID3) |
-| Dailymotion | ✅ | `tunnel` 1080p |
-| Facebook | ✅ | `redirect` p/ `fbcdn.net` (sem login!) |
-| Instagram | ✅ | `picker` com 10 itens (carrossel) |
-| Bluesky | ✅ | `tunnel` mp4 |
-| Tumblr | ✅ | `redirect` p/ `va.media.tumblr.com` |
-| Pinterest | ✅ | `redirect` p/ `pinimg` |
-| Twitch (clips) | ✅ | `redirect` 1080p |
-| Rutube | ✅ | `tunnel` 1080p |
-| Loom | ✅ | `redirect` p/ `cdn.loom.com` (2ª URL; a 1ª estava morta) |
-| Bilibili | ❌ | `fetch.empty` (página dá 403 daqui — geo/bloqueio) |
-| VK / OK | ❌ | `fetch.critical` (exigem login/token) |
-| Snapchat | ❌ | `fetch.fail` (login exigido) |
-| Streamable | ❌ | IDs de teste deletados (`empty`) |
-| Newgrounds | ❌ | `critical`/`empty` (login ou removido) |
+| YouTube | ⚠️ partial | `tunnel` OK (metadata), but the stream came back empty from this IP — typical anti-bot block; fixed with `cookies.json` on the instance (see below) |
+| Twitter/X | ✅ | `redirect` straight to `video.twimg.com` |
+| TikTok | ❌ | `fetch.fail` ×3 (TikTok anti-bot block) |
+| Vimeo | ❌ | `fetch.fail` ×3, including a fresh URL (block) |
+| Reddit | ❌ | `fetch.fail` (block/removed content) |
+| SoundCloud | ✅ | valid `tunnel` MP3 (3.8 MB, with ID3) |
+| Dailymotion | ✅ | 1080p `tunnel` |
+| Facebook | ✅ | `redirect` to `fbcdn.net` (no login!) |
+| Instagram | ✅ | `picker` with 10 items (carousel) |
+| Bluesky | ✅ | mp4 `tunnel` |
+| Tumblr | ✅ | `redirect` to `va.media.tumblr.com` |
+| Pinterest | ✅ | `redirect` to `pinimg` |
+| Twitch (clips) | ✅ | 1080p `redirect` |
+| Rutube | ✅ | 1080p `tunnel` |
+| Loom | ✅ | `redirect` to `cdn.loom.com` (2nd URL; 1st was dead) |
+| Bilibili | ❌ | `fetch.empty` (page 403s from here — geo/block) |
+| VK / OK | ❌ | `fetch.critical` (require login/token) |
+| Snapchat | ❌ | `fetch.fail` (login required) |
+| Streamable | ❌ | test IDs deleted (`empty`) |
+| Newgrounds | ❌ | `critical`/`empty` (login or removed) |
 
-Todos os serviços são reconhecidos (nenhum `service.unsupported`); os erros vêm
-com código limpo que o popup traduz (v1.1.2+). Limite da instância: 40 req/60s —
-rajadas paralelas dão `rate_exceeded`; a extensão usa 1 req por clique.
+All services are recognized (no `service.unsupported`); errors arrive
+with clean codes that the popup translates (v1.1.2+). Instance limit: 40 req/60s —
+parallel bursts yield `rate_exceeded`; the extension does 1 req per click.
 
-**YouTube pedindo cookies?** Crie `~/cobalt-local/cookies.json` no formato de
+**YouTube asking for cookies?** Create `~/cobalt-local/cookies.json` in the format of
 [examples/cookies.example.json](https://github.com/imputnet/cobalt/blob/main/docs/examples/cookies.example.json),
-recreie o container com `-v ~/cobalt-local/cookies.json:/cookies.json -e COOKIE_PATH=/cookies.json`
-e pronto (cookies da sua conta Google, exportados pelo navegador).
+recreate the container with `-v ~/cobalt-local/cookies.json:/cookies.json -e COOKIE_PATH=/cookies.json`
+and done (cookies from your Google account, exported via the browser).
 
-## Se o download travar no "iniciando"
+## If a download gets stuck on "starting"
 
-Desde a v1.1.1 a extensão acompanha o download de verdade:
-- **Popup**: mostra progresso (MB baixados/total), "Concluído" ou o motivo da falha
-  (`NETWORK_FAILED`, `FILE_ACCESS_DENIED`…) com botões **Abrir link direto**,
-  **Copiar link** e **Tentar de novo**. Confira também `about:downloads`.
-- **Menu de contexto**: notifica conclusão; se falhar, a notificação abre o link direto.
-- Nota: respostas `redirect` (ex.: Twitter → `video.twimg.com`) são links diretos do
-  serviço — se o gerenciador travar, o link direto em nova aba quase sempre resolve.
+Since v1.1.1 the extension truly tracks downloads:
+- **Popup**: shows progress (downloaded/total MB), "Done" or the failure reason
+  (`NETWORK_FAILED`, `FILE_ACCESS_DENIED`…) with **Open direct link**,
+  **Copy link** and **Retry** buttons. Also check `about:downloads`.
+- **Context menu**: notifies on completion; on failure the notification opens the direct link.
+- Note: `redirect` responses (e.g. Twitter → `video.twimg.com`) are direct service
+  links — if the manager stalls, the direct link in a new tab almost always works.
 
-## Qual URL de API usar?
+## Which API URL should I use?
 
-- O **site** `https://cobalt.meowing.de` é só o frontend web (retorna HTML — causa erro de JSON).
-- A **API** é `https://cobalt-api.meowing.de` (verificado: Cobalt 11.7.1, 22 serviços).
-  Ela exige autenticação, e os caminhos que funcionam em extensões são **Api-Key**
-  (pedido ao dono) ou **JWT manual** colado nas Opções (a extensão lê a validade do
-  próprio token). O desafio Turnstile não roda dentro da extensão: a política da AMO
-  proíbe código remoto e o Cloudflare só aceita o domínio do próprio site.
-- Alternativas: sua própria instância ([guia](https://github.com/imputnet/cobalt/blob/main/docs/run-an-instance.md))
-  ou APIs comunitárias de https://instances.cobalt.best (com permissão do dono).
+- The **site** `https://cobalt.meowing.de` is just the web frontend (returns HTML — causes JSON errors).
+- The **API** is `https://cobalt-api.meowing.de` (verified: Cobalt 11.7.1, 22 services).
+  It requires authentication, and the paths that work in extensions are **Api-Key**
+  (requested from the owner) or a manually pasted **JWT** in Options (the extension reads
+  validity from the token itself). The Turnstile challenge can't run inside the extension:
+  AMO policy forbids remote code and Cloudflare only accepts the site's own domain.
+- Alternatives: your own instance ([guide](https://github.com/imputnet/cobalt/blob/main/docs/run-an-instance.md))
+  or community APIs from https://instances.cobalt.best (with the owner's permission).
 
-## Privacidade
+## Privacy
 
-A extensão envia a URL da mídia **somente** para a instância Cobalt que você configurar
-(por isso o `manifest.json` declara `data_collection_permissions: ["websiteActivity"]`).
-Api-Key e token de sessão ficam em `storage.sync` (sincronizado com sua conta Firefox
-em texto — comportamento padrão de extensões; use perfil protegido por senha).
-Nenhum dado é enviado a terceiros pelos autores da extensão. Deixe a instância em branco
-para não transmitir nada.
+The extension sends the media URL **only** to the Cobalt instance you configure
+(which is why `manifest.json` declares `data_collection_permissions: ["websiteActivity"]`).
+Api-Key and session token live in `storage.sync` (synced with your Firefox account
+in plaintext — standard extension behavior; use a password-protected profile).
+No data is sent to the extension authors. Leave the instance blank
+to transmit nothing.
 
-Segurança (auditado): sem `eval`/`innerHTML` com dados externos (só `textContent`),
-sem scripts inline (CSP estrita), URLs da API validadas para `http(s)` antes de
-baixar/abrir (bloqueia `javascript:`/`data:` de instância maliciosa), host nativo
-restrito a comandos docker fixos, sem `shell=True`.
+Security (audited): no `eval`/`innerHTML` with external data (`textContent` only),
+no inline scripts (strict CSP), API URLs validated to `http(s)` before
+downloading/opening (blocks `javascript:`/`data:` from a malicious instance), native host
+restricted to fixed docker commands, no `shell=True`.
 
-## Empacotar p/ AMO
+## License
+
+MIT © 2026 Pedro — see [LICENSE](LICENSE). In short: you may use, copy, modify,
+merge, publish, distribute, sublicense and sell this software, provided the copyright
+notice is kept; it comes **without any warranty**. `native-host/` and docs are covered
+by the same license. This project is independent from Cobalt itself
+([imputnet/cobalt](https://github.com/imputnet/cobalt), AGPL-3.0): it only talks to
+Cobalt instances over HTTP and bundles none of their code, so no copyleft applies here.
+The icons are original artwork drawn for this project.
+
+## Packaging for AMO
 
 ```bash
-zip -r cobalt-media-downloader-1.0.0.zip manifest.json background.js popup.html popup.js popup.css options.html options.js picker.html icons/
+# from the repo root; versioned file, e.g.:
+python3 -c "
+import zipfile
+files = ['manifest.json','cobalt.js','background.js','popup.html','popup.js','popup.css','options.html','options.js','picker.html','picker.js','icons/icon-48.png','icons/icon-96.png','icons/icon-128.png']
+with zipfile.ZipFile('cobalt-firefox-extension-amo-1.3.0.zip','w',zipfile.ZIP_DEFLATED) as z:
+    for f in files: z.write('cobalt-firefox-extension/'+f, f)
+"
 ```
 
-Depois submeta em https://addons.mozilla.org/developers/ (canal listado).
+Then submit at https://addons.mozilla.org/developers/ (listed channel).
+`native-host/`, docs and screenshots stay out of the package by design.
 
-## Estrutura
+## Structure
 
 - `manifest.json` (MV2, `browser_specific_settings.gecko`)
-- `background.js` — menus de contexto + `cobaltRequest()` + downloads + mensagens
-- `popup.html/js/css` — UI rápida (URL, modo, qualidade, picker)
-- `options.html/js` — instância, Api-Key, padrões
-- `picker.html` — fallback p/ resultados `picker` vindos do menu de contexto
+- `cobalt.js` — shared helpers: API calls, auth headers, session/JWT, URL allow-list
+- `background.js` — context menus + local lifecycle (ensure-up/heartbeat/stop) + download tracking
+- `popup.html/js/css` — quick UI (URL, mode, quality, progress, picker)
+- `options.html/js` — instance, Api-Key/JWT, local stack, cookies, defaults
+- `picker.html/js` — fallback for `picker` results coming from the context menu
+- `native-host/` — `cobalt_host.py` lifecycle host + `install-host.sh` installer
