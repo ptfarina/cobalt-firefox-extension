@@ -26,7 +26,7 @@ var Cobalt = (() => {
     doc.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = T(el.getAttribute("data-i18n")); });
     doc.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.setAttribute("placeholder", T(el.getAttribute("data-i18n-ph"))); });
     doc.querySelectorAll("[data-i18n-title]").forEach((el) => { el.setAttribute("title", T(el.getAttribute("data-i18n-title"))); });
-    doc.querySelectorAll("[data-i18n-html]").forEach((el) => { el.innerHTML = T(el.getAttribute("data-i18n-html")); });
+    doc.querySelectorAll("[data-i18n-html]").forEach((el) => { el.textContent = T(el.getAttribute("data-i18n-html")); });
   }
 
   function normalizeInstance(raw) {
