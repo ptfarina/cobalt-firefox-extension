@@ -24,6 +24,9 @@ import time
 import urllib.request
 
 CONTAINERS = ["cobalt-yt-session", "cobalt-local"]  # ordem de subida
+# Container que pode nao existir: o install-host.sh so cria o cobalt-local,
+# e o gerador de sessao do YouTube e opcional.
+OPTIONAL_CONTAINERS = {"cobalt-yt-session"}
 API_BASE = "http://127.0.0.1:9000"
 COOKIES_FILE = os.path.expanduser("~/cobalt-local/cookies.json")
 IDLE_TIMEOUT = 6 * 60  # segundos sem heartbeat até parar o container
@@ -108,6 +111,11 @@ def cmd_ensure_up(wait=45):
         if not is_running(name):
             rc, _, err = docker("start", name)
             if rc != 0:
+                # Container opcional ausente (ex.: cobalt-yt-session, que o
+                # install-host.sh nao cria): segue sem ele. Para o container
+                # principal a ausencia continua sendo erro.
+                if "No such container" in (err or "") and name in OPTIONAL_CONTAINERS:
+                    continue
                 return {"ok": False, "error": "docker start %s falhou: %s" % (name, err or rc)}
     deadline = time.time() + max(5, min(int(wait or 45), 120))
     info = None
