@@ -19,6 +19,50 @@ var Cobalt = (() => {
     }
   }
 
+  // Allowlist do markup dos textos de locale (tags e atributos aceitos).
+  // Qualquer outra tag é removida; tags perigosas perdem também o conteúdo.
+  const LOCALE_TAGS = new Set([
+    "B", "STRONG", "I", "EM", "U", "CODE", "PRE", "BR",
+    "P", "SPAN", "UL", "OL", "LI", "A"
+  ]);
+  const LOCALE_DROP = new Set([
+    "SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "TEMPLATE", "NOSCRIPT",
+    "SVG", "MATH", "LINK", "META", "BASE", "FORM", "IMG", "VIDEO", "AUDIO",
+    "SOURCE", "TRACK", "INPUT", "BUTTON", "TEXTAREA", "SELECT", "OPTION"
+  ]);
+  const LOCALE_ATTRS = { A: new Set(["href", "title"]) };
+
+  /** Converte o markup de um texto de locale em nós DOM seguros (sem innerHTML cru). */
+  function renderLocaleMarkup(el, html) {
+    const src = new DOMParser().parseFromString(String(html || ""), "text/html");
+    const build = (node, dest) => {
+      for (const child of node.childNodes) {
+        if (child.nodeType === 3) {                       // texto
+          dest.appendChild(document.createTextNode(child.nodeValue));
+          continue;
+        }
+        if (child.nodeType !== 1) continue;              // comentários etc. são ignorados
+        const tag = child.tagName.toUpperCase();
+        if (LOCALE_DROP.has(tag)) continue;              // descarta tag e conteúdo
+        if (!LOCALE_TAGS.has(tag)) { build(child, dest); continue; } // mantém só o texto
+        const out = document.createElement(tag.toLowerCase());
+        const allowed = LOCALE_ATTRS[tag];
+        if (allowed) {
+          for (const attr of child.attributes) {
+            const name = attr.name.toLowerCase();
+            if (!allowed.has(name)) continue;
+            if (name === "href" && !isSafeUrl(attr.value)) continue; // só http(s)
+            out.setAttribute(name, attr.value);
+          }
+        }
+        build(child, out);
+        dest.appendChild(out);
+      }
+    };
+    el.textContent = "";
+    build(src.body, el);
+  }
+
   /** Aplica data-i18n / data-i18n-ph / data-i18n-title / data-i18n-html (estático, do catálogo). */
   function applyI18n(root) {
     const doc = root || (typeof document !== "undefined" ? document : null);
@@ -26,7 +70,7 @@ var Cobalt = (() => {
     doc.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = T(el.getAttribute("data-i18n")); });
     doc.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.setAttribute("placeholder", T(el.getAttribute("data-i18n-ph"))); });
     doc.querySelectorAll("[data-i18n-title]").forEach((el) => { el.setAttribute("title", T(el.getAttribute("data-i18n-title"))); });
-    doc.querySelectorAll("[data-i18n-html]").forEach((el) => { el.textContent = T(el.getAttribute("data-i18n-html")); });
+    doc.querySelectorAll("[data-i18n-html]").forEach((el) => { renderLocaleMarkup(el, T(el.getAttribute("data-i18n-html"))); });
   }
 
   function normalizeInstance(raw) {
