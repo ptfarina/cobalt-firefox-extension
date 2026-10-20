@@ -150,6 +150,15 @@ no inline scripts (strict CSP), API URLs validated to `http(s)` before
 downloading/opening (blocks `javascript:`/`data:` from a malicious instance), native host
 restricted to fixed docker commands, no `shell=True`.
 
+## Security
+
+Report vulnerabilities privately through
+[GitHub Security Advisories](https://github.com/ptfarina/cobalt-firefox-extension/security/advisories/new)
+(or the **Security → Report a vulnerability** button on this repo).
+**[SECURITY.md](SECURITY.md)** documents the trust model — what the extension trusts
+(your instance, your local stack), what it guarantees (no remote code, no exfiltration,
+`http(s)`-only URLs) and what is out of scope — plus response times.
+
 ## License
 
 MIT © 2026 ptfarina — see [LICENSE](LICENSE). In short: you may use, copy, modify,
