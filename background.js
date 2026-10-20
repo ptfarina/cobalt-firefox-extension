@@ -299,9 +299,11 @@ B.runtime.onSuspend && B.runtime.onSuspend.addListener(() => {
 });
 
 B.contextMenus.onClicked.addListener(async (info, tab) => {
+  // No item de midia (<video>/<audio>) o alvo e o proprio arquivo (info.srcUrl),
+  // nao a pagina que o contem; link usa info.linkUrl e o resto, a aba.
   const target = info.menuItemId === "cobalt-link"
     ? info.linkUrl
-    : (tab && tab.url);
+    : ((info.menuItemId === "cobalt-video" && info.srcUrl) || (tab && tab.url));
   if (target) await handleDownload(target);
 });
 
