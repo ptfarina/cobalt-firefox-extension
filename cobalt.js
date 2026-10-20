@@ -19,6 +19,11 @@ var Cobalt = (() => {
     }
   }
 
+  // Chaves de i18n devem ser identificadores estáveis, não texto/HTML arbitrário.
+  function isSafeI18nKey(key) {
+    return typeof key === "string" && /^[A-Za-z0-9._-]+$/.test(key);
+  }
+
   // Allowlist do markup dos textos de locale (tags e atributos aceitos).
   // Qualquer outra tag é removida; tags perigosas perdem também o conteúdo.
   const LOCALE_TAGS = new Set([
@@ -70,7 +75,11 @@ var Cobalt = (() => {
     doc.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = T(el.getAttribute("data-i18n")); });
     doc.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.setAttribute("placeholder", T(el.getAttribute("data-i18n-ph"))); });
     doc.querySelectorAll("[data-i18n-title]").forEach((el) => { el.setAttribute("title", T(el.getAttribute("data-i18n-title"))); });
-    doc.querySelectorAll("[data-i18n-html]").forEach((el) => { renderLocaleMarkup(el, T(el.getAttribute("data-i18n-html"))); });
+    doc.querySelectorAll("[data-i18n-html]").forEach((el) => {
+      const key = el.getAttribute("data-i18n-html");
+      const localized = isSafeI18nKey(key) ? T(key) : "";
+      renderLocaleMarkup(el, localized);
+    });
   }
 
   function normalizeInstance(raw) {
