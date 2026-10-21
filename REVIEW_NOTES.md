@@ -1,6 +1,6 @@
-# Notas ao revisor (AMO) — Cobalt Media Downloader
+# Notes for the reviewer (AMO) — Cobalt Media Downloader
 
-> Colar no campo **Notes to reviewer**. Em inglês.
+> Paste into the **Notes to reviewer** field. In English.
 
 ---
 

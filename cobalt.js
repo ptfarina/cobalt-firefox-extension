@@ -1,6 +1,6 @@
-/* Cobalt API helpers compartilhados (background + popup + options).
- * Carregado antes dos demais scripts. Expõe o global `Cobalt`.
- * Segue docs/api.md do imputnet/cobalt: POST /, POST /session, GET /.
+/* Shared Cobalt API helpers (background + popup + options).
+ * Loaded before the other scripts. Exposes the `Cobalt` global.
+ * Follows imputnet/cobalt's docs/api.md: POST /, POST /session, GET /.
  */
 var Cobalt = (() => {
   const LOCAL = {
@@ -19,13 +19,13 @@ var Cobalt = (() => {
     }
   }
 
-  // Chaves de i18n devem ser identificadores estáveis, não texto/HTML arbitrário.
+  // i18n keys must be stable identifiers, not arbitrary text/HTML.
   function isSafeI18nKey(key) {
     return typeof key === "string" && /^[A-Za-z0-9._-]+$/.test(key);
   }
 
-  // Allowlist do markup dos textos de locale (tags e atributos aceitos).
-  // Qualquer outra tag é removida; tags perigosas perdem também o conteúdo.
+  // Allowlist for the markup of locale strings (accepted tags and attributes).
+  // Any other tag is removed; dangerous tags also lose their content.
   const LOCALE_TAGS = new Set([
     "B", "STRONG", "I", "EM", "U", "CODE", "PRE", "BR",
     "P", "SPAN", "UL", "OL", "LI", "A"
@@ -37,7 +37,7 @@ var Cobalt = (() => {
   ]);
   const LOCALE_ATTRS = { A: new Set(["href", "title"]) };
 
-  /** Converte o markup de um texto de locale em nós DOM seguros (sem innerHTML cru). */
+  /** Converts the markup of a locale string into safe DOM nodes (no raw innerHTML). */
   function renderLocaleMarkup(el, html) {
     const src = new DOMParser().parseFromString(String(html || ""), "text/html");
     const build = (node, dest) => {
@@ -46,17 +46,17 @@ var Cobalt = (() => {
           dest.appendChild(document.createTextNode(child.nodeValue));
           continue;
         }
-        if (child.nodeType !== 1) continue;              // comentários etc. são ignorados
+        if (child.nodeType !== 1) continue;              // comments and the like are ignored
         const tag = child.tagName.toUpperCase();
-        if (LOCALE_DROP.has(tag)) continue;              // descarta tag e conteúdo
-        if (!LOCALE_TAGS.has(tag)) { build(child, dest); continue; } // mantém só o texto
+        if (LOCALE_DROP.has(tag)) continue;              // drops the tag and its content
+        if (!LOCALE_TAGS.has(tag)) { build(child, dest); continue; } // keeps only the text
         const out = document.createElement(tag.toLowerCase());
         const allowed = LOCALE_ATTRS[tag];
         if (allowed) {
           for (const attr of child.attributes) {
             const name = attr.name.toLowerCase();
             if (!allowed.has(name)) continue;
-            if (name === "href" && !isSafeUrl(attr.value)) continue; // só http(s)
+            if (name === "href" && !isSafeUrl(attr.value)) continue; // http(s) only
             out.setAttribute(name, attr.value);
           }
         }
@@ -68,7 +68,7 @@ var Cobalt = (() => {
     build(src.body, el);
   }
 
-  /** Aplica data-i18n / data-i18n-ph / data-i18n-title / data-i18n-html (estático, do catálogo). */
+  /** Applies data-i18n / data-i18n-ph / data-i18n-title / data-i18n-html (static, from the catalog). */
   function applyI18n(root) {
     const doc = root || (typeof document !== "undefined" ? document : null);
     if (!doc || !doc.querySelectorAll) return;
@@ -95,7 +95,7 @@ var Cobalt = (() => {
     return Date.now() < (s.sessionExp - 60 * 1000); // 60s de margem
   }
 
-  /** Api-Key tem prioridade; senão usa o Bearer JWT manual, se válido. */
+  /** The Api-Key takes priority; otherwise the manual Bearer JWT is used, if valid. */
   function authHeaders(apiKey, settings, base) {
     const h = { "Accept": "application/json", "Content-Type": "application/json" };
     const key = (apiKey || "").trim();
@@ -131,7 +131,7 @@ var Cobalt = (() => {
     }
   }
 
-  /** GET / — info da instância (versão, serviços, turnstileSitekey). */
+  /** GET / — instance info (version, services, turnstileSitekey). */
   async function fetchInstanceInfo(base) {
     const r = await fetch(normalizeInstance(base) + "/", { headers: { "Accept": "application/json" } });
     const json = await readApiJson(r);
@@ -148,7 +148,7 @@ var Cobalt = (() => {
     return await readApiJson(res);
   }
 
-  /** Lê o exp (segundos) de um JWT e devolve em ms; null se opaco/inválido. */
+  /** Reads the exp (seconds) of a JWT and returns it in ms; null if opaque/invalid. */
   function jwtExpiryMs(token) {
     try {
       const parts = String(token || "").split(".");
@@ -180,7 +180,7 @@ var Cobalt = (() => {
     return map[code] ? T(map[code]) : code;
   }
 
-  /** Só permite http(s) — bloqueia javascript:/data:/blob: vindos da API (instância maliciosa). */
+  /** Only allows http(s) — blocks javascript:/data:/blob: coming from the API (malicious instance). */
   function isSafeUrl(u) {
     try {
       const p = new URL(u).protocol;
@@ -204,7 +204,7 @@ var Cobalt = (() => {
     return /^http:\/\/(localhost|127\.0\.0\.1)(:9000)?\/?$/.test(u);
   }
 
-  /** Fala com o host nativo (sobe/para a instância local). Nunca lança. */
+  /** Talks to the native host (starts/stops the local instance). Never throws. */
   async function localHost(B, msg) {
     try {
       return await B.runtime.sendNativeMessage(LOCAL.host, msg);
@@ -218,12 +218,12 @@ var Cobalt = (() => {
     }
   }
 
-  /** Garante a instância local de pé. Só age se a URL for local. */
+  /** Makes sure the local instance is up. Only acts if the URL is local. */
   async function ensureLocalIfNeeded(B, base) {
     if (!isLocalUrl(base)) return { ok: true, remote: true };
     const r = await localHost(B, { cmd: "ensure-up", wait: 60 });
     if (r && r.ok) return { ok: true, version: r.version };
-    const msg = (r && (r.message || r.error)) || "falha desconhecida";
+    const msg = (r && (r.message || r.error)) || "unknown error";
     return { ok: false, message: T("errLocalDownFull", msg) };
   }
 

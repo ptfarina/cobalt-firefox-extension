@@ -1,5 +1,5 @@
-/* Options — Cobalt.* vem de cobalt.js (todo o código é local, sem scripts remotos).
- * Textos via Cobalt.T() / _locales (en padrão, pt_BR). */
+/* Options — Cobalt.* comes from cobalt.js (all the code is local, no remote scripts).
+ * Texts via Cobalt.T() / _locales (en default, pt_BR). */
 const B = (typeof browser !== "undefined") ? browser : chrome;
 const $ = (id) => document.getElementById(id);
 const T = (k, ...subs) => Cobalt.T(k, subs.length ? subs : undefined);
@@ -45,7 +45,7 @@ function renderSessionStatus(s) {
 async function save() {
   const prev = await B.storage.sync.get(DEFAULTS);
   const instanceUrl = $("instanceUrl").value.trim().replace(/\/+$/, "");
-  // Trocar de instância invalida a sessão antiga.
+  // Switching instance invalidates the old session.
   const sameInstance = Cobalt.normalizeInstance(prev.sessionInstance || prev.instanceUrl) === Cobalt.normalizeInstance(instanceUrl);
   const jwt = $("jwtToken").value.trim();
   let sessionToken = "", sessionExp = 0, sessionInstance = "";
