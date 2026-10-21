@@ -10,6 +10,10 @@ A Firefox extension that uses the **current Cobalt API** ([imputnet/cobalt](http
 - `GET {instance}/` → instance check (version + services)
 - `Authorization: Api-Key …` / `Bearer …` support (protected instances)
 
+## Releases
+
+- v1.3.0 (2026-10-11) - notas em [RELEASE_1.3.0.md](RELEASE_1.3.0.md)
+
 ## Why another extension?
 
 | Existing extension | Status (Oct 2026) |
@@ -78,7 +82,7 @@ the `cookies.example.json` format (only the cookies listed per service; e.g. You
 Status (generator + services with cookies) shows in Options → Anti-bot. Privacy:
 cookies are your account session — they never leave your machine (`127.0.0.1` bind).
 
-## Per-service compatibility (tested 10/11/2026, local instance 11.7.1)
+## Per-service compatibility (tested 10/21/2026, local instance 11.7.1)
 
 Real `POST /` matrix (the same call the extension makes) + picker UI validated
 with a genuine 10-item Instagram response:
