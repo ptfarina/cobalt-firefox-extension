@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""Host nativo (Firefox native messaging) que gerencia a instância Cobalt local.
+"""Native host (Firefox native messaging) that manages the local Cobalt instance.
 
-Comandos (JSON via stdin, protocolo native messaging: 4 bytes LE + payload):
+Commands (JSON over stdin, native messaging protocol: 4 bytes LE + payload):
   {"cmd":"ping"}                 -> {ok, running, version}
   {"cmd":"status"}               -> {ok, running, version, services}
-  {"cmd":"ensure-up","wait":45}  -> sobe o container e espera a API responder
-  {"cmd":"stop"}                 -> para o container
+  {"cmd":"ensure-up","wait":45}  -> starts the container and waits for the API to answer
+  {"cmd":"stop"}                 -> stops the container
 
-Só gerencia os containers fixos CONTAINERS. Não executa nada arbitrário.
+It only manages the fixed CONTAINERS. It never runs anything arbitrary.
 
-Como cada mensagem gera um processo novo (sendNativeMessage), o desligamento
-por ociosidade é feito por um supervisor destacado (--watch, singleton via
-pidfile): a extensão envia heartbeat periódico enquanto o Firefox está aberto;
-se o container ficar sem sinal por IDLE_TIMEOUT, o supervisor o para. Assim a
-instância morre pouco depois de fechar o Firefox (e também em crash/sleep).
+Since every message spawns a new process (sendNativeMessage), the idle
+shutdown is handled by a detached supervisor (--watch, singleton via
+pidfile): the extension sends a periodic heartbeat while Firefox is open;
+if the container goes without a signal for IDLE_TIMEOUT, the supervisor stops it. So the
+instance dies shortly after Firefox is closed (and also on crash/sleep).
 """
 import json
 import os
@@ -23,13 +23,13 @@ import sys
 import time
 import urllib.request
 
-CONTAINERS = ["cobalt-yt-session", "cobalt-local"]  # ordem de subida
-# Container que pode nao existir: o install-host.sh so cria o cobalt-local,
-# e o gerador de sessao do YouTube e opcional.
+CONTAINERS = ["cobalt-yt-session", "cobalt-local"]  # start order
+# Container that may not exist: install-host.sh only creates cobalt-local,
+# and the YouTube session generator is optional.
 OPTIONAL_CONTAINERS = {"cobalt-yt-session"}
 API_BASE = "http://127.0.0.1:9000"
 COOKIES_FILE = os.path.expanduser("~/cobalt-local/cookies.json")
-IDLE_TIMEOUT = 6 * 60  # segundos sem heartbeat até parar o container
+IDLE_TIMEOUT = 6 * 60  # seconds without a heartbeat before stopping the container
 CACHE = os.path.expanduser("~/.cache/cobalt-local")
 SEEN_FILE = os.path.join(CACHE, "last_seen")
 PID_FILE = os.path.join(CACHE, "supervisor.pid")
@@ -40,9 +40,9 @@ def docker(*args, timeout=30):
         p = subprocess.run(["docker", *args], capture_output=True, text=True, timeout=timeout)
         return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
     except FileNotFoundError:
-        return 127, "", "binário 'docker' não encontrado no PATH"
+        return 127, "", "'docker' binary not found in PATH"
     except subprocess.TimeoutExpired:
-        return 124, "", "timeout ao falar com o docker"
+        return 124, "", "timeout talking to docker"
 
 
 def touch():
@@ -71,7 +71,7 @@ def any_running():
 
 
 def cookies_info():
-    """Diz se ~/cobalt-local/cookies.json existe e quais serviços têm valores."""
+    """Reports whether ~/cobalt-local/cookies.json exists and which services have values."""
     try:
         data = json.load(open(COOKIES_FILE))
         services = sorted([k for k, v in data.items()
@@ -111,12 +111,12 @@ def cmd_ensure_up(wait=45):
         if not is_running(name):
             rc, _, err = docker("start", name)
             if rc != 0:
-                # Container opcional ausente (ex.: cobalt-yt-session, que o
-                # install-host.sh nao cria): segue sem ele. Para o container
-                # principal a ausencia continua sendo erro.
+                # Optional container missing (e.g. cobalt-yt-session, which
+                # install-host.sh does not create): carry on without it. For the main
+                # container the absence is still an error.
                 if "No such container" in (err or "") and name in OPTIONAL_CONTAINERS:
                     continue
-                return {"ok": False, "error": "docker start %s falhou: %s" % (name, err or rc)}
+                return {"ok": False, "error": "docker start %s failed: %s" % (name, err or rc)}
     deadline = time.time() + max(5, min(int(wait or 45), 120))
     info = None
     while time.time() < deadline:
@@ -126,7 +126,7 @@ def cmd_ensure_up(wait=45):
         time.sleep(1.5)
     if not info:
         return {"ok": False,
-                "error": "container iniciou mas a API não respondeu. Veja `docker logs cobalt-local`."}
+                "error": "container started but the API did not answer. See `docker logs cobalt-local`."}
     return {"ok": True, "running": True, "version": info.get("version"),
             "services": info.get("services")}
 
@@ -137,7 +137,7 @@ def cmd_stop():
     for name in reversed(CONTAINERS):
         rc, _, err = docker("stop", "-t", "10", name, timeout=30)
         if rc != 0 and "No such container" not in err:
-            return {"ok": False, "error": "docker stop %s falhou: %s" % (name, err or rc)}
+            return {"ok": False, "error": "docker stop %s failed: %s" % (name, err or rc)}
     return {"ok": True, "running": False}
 
 
@@ -151,7 +151,7 @@ def supervisor_alive():
 
 
 def ensure_supervisor():
-    """Garante o supervisor destacado (singleton). Processo atual é efêmero."""
+    """Ensures the detached supervisor is running (singleton). The current process is ephemeral."""
     try:
         os.makedirs(CACHE, exist_ok=True)
         if supervisor_alive():
@@ -220,8 +220,8 @@ def main():
             elif cmd in ("status", "ping"):
                 resp = cmd_status()
             else:
-                resp = {"ok": False, "error": "comando desconhecido: %s" % cmd}
-        except Exception as e:  # nunca derrubar o protocolo
+                resp = {"ok": False, "error": "unknown command: %s" % cmd}
+        except Exception as e:  # never break the protocol
             resp = {"ok": False, "error": str(e)[:300]}
         try:
             write_msg(out, resp)

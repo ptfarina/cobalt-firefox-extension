@@ -1,6 +1,6 @@
-/* Popup — chama a API atual do Cobalt (POST /) e trata tunnel/redirect/picker/error.
- * Helpers compartilhados em cobalt.js (global Cobalt), carregado antes deste script.
- * Todos os textos via Cobalt.T() / _locales (en padrão, pt_BR). */
+/* Popup — calls the current Cobalt API (POST /) and handles tunnel/redirect/picker/error.
+ * Shared helpers live in cobalt.js (Cobalt global), loaded before this script.
+ * All texts via Cobalt.T() / _locales (en default, pt_BR). */
 const B = (typeof browser !== "undefined") ? browser : chrome;
 const $ = (id) => document.getElementById(id);
 const T = (k, ...subs) => Cobalt.T(k, subs.length ? subs : undefined);
@@ -51,7 +51,7 @@ function fmtSize(n) {
   return n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
 }
 
-/** Inicia o download e acompanha o progresso real. */
+/** Starts the download and follows the real progress. */
 async function startTrackedDownload(url, filename) {
   if (!Cobalt.isSafeUrl(url)) {
     showStatus(T("errUnsafeUrl"), true);
@@ -89,7 +89,7 @@ async function startTrackedDownload(url, filename) {
   }
 }
 
-/** Botões de saída quando o download direto falha: abrir link / copiar / repetir. */
+/** Escape buttons when the direct download fails: open link / copy / retry. */
 function renderFallback(url, filename) {
   const box = $("picker");
   box.innerHTML = "";
@@ -159,7 +159,7 @@ async function doDownload() {
   }
   const target = $("url").value.trim();
   if (!target) { showStatus(T("errNeedUrl"), true); return; }
-  // persiste preferências da sessão
+  // persists the session preferences
   await B.storage.sync.set({
     downloadMode: $("downloadMode").value,
     videoQuality: $("videoQuality").value,

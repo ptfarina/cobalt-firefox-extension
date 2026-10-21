@@ -68,6 +68,7 @@
   "notifFrontendT": { "message": "Cobalt: URL do frontend, não da API" },
   "notifFrontendM": { "message": "A URL configurada retornou o site (HTML). Informe a URL base da API, não a do frontend web. Use https://." },
   "notifNetT": { "message": "Cobalt: erro de rede/autenticação" },
+  "notifUnsafeUrlT": { "message": "Cobalt: URL bloqueada" },
   "notifAuthT": { "message": "Cobalt: autenticação necessária" },
   "notifDoneT": { "message": "Cobalt: download concluído" },
   "notifFailT": { "message": "Cobalt: download falhou" },

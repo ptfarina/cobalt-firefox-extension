@@ -1,13 +1,13 @@
 /* Cobalt Media Downloader — background (MV2, Firefox-first)
- * Compatível com a API atual do imputnet/cobalt:
+ * Compatible with the current imputnet/cobalt API:
  *   POST {instance}/  (Accept + Content-Type: application/json)
- *   GET  {instance}/  (info da instância)
+ *   GET  {instance}/  (instance info)
  * Respostas: tunnel | redirect | picker | error (+ local-processing)
  */
 
 const B = (typeof browser !== "undefined") ? browser : chrome;
 
-// true se subimos a instância local nesta sessão: habilita heartbeat e stop ao fechar.
+// true if we started the local instance this session: enables heartbeat and stop on close.
 let localActive = false;
 
 const SUPPORTED_PATTERNS = [
@@ -62,7 +62,7 @@ async function getSettings() {
   return d;
 }
 
-/** Chamada principal à API atual do Cobalt. Retorna o JSON já parseado. */
+/** Main call to the current Cobalt API. Returns the parsed JSON. */
 async function cobaltRequest(instanceUrl, apiKey, body, settings) {
   const base = normalizeInstance(instanceUrl);
   if (!base) throw new Error("missing-instance");
@@ -73,7 +73,7 @@ async function cobaltRequest(instanceUrl, apiKey, body, settings) {
     body: JSON.stringify(body)
   });
   if (!(res.headers.get("content-type") || "").includes("application/json")) {
-    // Provável URL do frontend web (HTML) em vez da API, ou redirect http→https.
+    // Probably the web frontend URL (HTML) instead of the API, or an http→https redirect.
     throw new Error("not-json-frontend");
   }
   const text = await res.text();
@@ -91,27 +91,27 @@ async function cobaltRequest(instanceUrl, apiKey, body, settings) {
 
 async function downloadUrl(url, filename) {
   if (!Cobalt.isSafeUrl(url)) {
-    notify("Cobalt: URL bloqueada", "A instância retornou um protocolo inesperado (não http/https).");
+    notify(Cobalt.T("notifUnsafeUrlT"), Cobalt.T("errUnsafeUrl"));
     return;
   }
   let id;
   try {
     id = await B.downloads.download({ url, filename: filename || undefined, saveAs: false, conflictAction: "uniquify" });
   } catch (e) {
-    // fallback imediato: abre em nova aba (útil p/ redirect direto de serviços)
+    // immediate fallback: open in a new tab (useful for direct service redirects)
     try { await B.tabs.create({ url }); } catch {}
     return;
   }
-  // registra p/ o onChanged avisar o resultado (persiste p/ sobreviver ao unload)
+  // records it so onChanged can report the result (persisted to survive an unload)
   try {
     const store = await B.storage.local.get({ pendingDl: {} });
-    store.pendingDl[id] = { url, filename: filename || "arquivo", at: Date.now() };
+    store.pendingDl[id] = { url, filename: filename || Cobalt.T("defaultFilename"), at: Date.now() };
     await B.storage.local.set({ pendingDl: store.pendingDl });
   } catch {}
 }
 
-// Acompanha downloads iniciados pelo menu: avisa conclusão e, se falhar,
-// oferece o link direto (o status "iniciando" nunca fica mudo).
+// Follows downloads started from the menu: reports completion and, on failure,
+// offers the direct link (the "starting" status never goes silent).
 B.downloads && B.downloads.onChanged && B.downloads.onChanged.addListener(async (delta) => {
   if (!delta || delta.id == null || !delta.state || !delta.state.current) return;
   const cur = delta.state.current;
@@ -205,7 +205,7 @@ async function handleDownload(sourceUrl) {
       return json;
     }
     if (json.status === "picker") {
-      // Salva p/ o picker.html exibir; abre aba com as opções.
+      // Saved for picker.html to display; opens a tab with the options.
       await B.storage.local.set({ lastPicker: { sourceUrl, at: Date.now(), result: json } });
       await B.tabs.create({ url: B.runtime.getURL("picker.html") });
       return json;
@@ -218,7 +218,7 @@ async function handleDownload(sourceUrl) {
     // error
     const code = (json.error && json.error.code) || "unknown";
     if (Cobalt.needsAuth(code) && !(s.apiKey || "").trim()) {
-      // Sessão (JWT) ausente/expirada: limpa e orienta a reconfigurar.
+      // Missing/expired session (JWT): clears it and asks the user to reconfigure.
       try { await B.storage.sync.set({ sessionToken: "", sessionExp: 0 }); } catch {}
       notify(Cobalt.T("notifAuthT"), Cobalt.friendlyError(code));
     } else {
@@ -239,7 +239,7 @@ function friendlyError(code) {
   return Cobalt.friendlyError(code);
 }
 
-// ---- menus de contexto ----
+// ---- context menus ----
 function setupMenus() {
   try { B.contextMenus.removeAll(() => createMenus()); }
   catch { createMenus(); }
@@ -289,9 +289,9 @@ B.alarms && B.alarms.onAlarm.addListener(async (alarm) => {
   }
 });
 
-// Melhor esforço: parar ao fechar o Firefox. Mesmo se esta mensagem não for
-// entregue no shutdown, o supervisor do host para o container por ociosidade
-// (sem heartbeat => Firefox fechado), então a instância sempre desliga.
+// Best effort: stop when Firefox closes. Even if this message never
+// reaches the shutdown handler, the host supervisor stops the container on idle
+// (no heartbeat => Firefox closed), so the instance always shuts down.
 B.runtime.onSuspend && B.runtime.onSuspend.addListener(() => {
   if (localActive) {
     try { B.runtime.sendNativeMessage(Cobalt.LOCAL.host, { cmd: "stop" }); } catch {}
@@ -299,20 +299,20 @@ B.runtime.onSuspend && B.runtime.onSuspend.addListener(() => {
 });
 
 B.contextMenus.onClicked.addListener(async (info, tab) => {
-  // No item de midia (<video>/<audio>) o alvo e o proprio arquivo (info.srcUrl),
-  // nao a pagina que o contem; link usa info.linkUrl e o resto, a aba.
+  // For the media item (<video>/<audio>) the target is the file itself (info.srcUrl),
+  // not the page containing it; link uses info.linkUrl and anything else uses the tab.
   const target = info.menuItemId === "cobalt-link"
     ? info.linkUrl
     : ((info.menuItemId === "cobalt-video" && info.srcUrl) || (tab && tab.url));
   if (target) await handleDownload(target);
 });
 
-// Clique no ícone sem popup? (popup existe; este listener fica como fallback)
+// Icon click without the popup? (the popup exists; this listener stays as a fallback)
 B.browserAction && B.browserAction.onClicked && B.browserAction.onClicked.addListener(async (tab) => {
   if (tab && tab.url && /^https?:/.test(tab.url)) await handleDownload(tab.url);
 });
 
-// Mensagens do popup/options/picker (reuso da mesma lógica)
+// Messages from the popup/options/picker (reusing the same logic)
 B.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   (async () => {
     if (msg && msg.type === "cobalt-download") {
